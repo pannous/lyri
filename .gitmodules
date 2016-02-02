@@ -1,0 +1,9 @@
+[submodule "angle"]
+	path = angle
+	url = git@github.com:pannous/angle
+[submodule "betty"]
+	path = betty
+	url = git@github.com:pannous/betty
+[submodule "english-script"]
+	path = english-script
+	url = git@github.com:pannous/english-script
