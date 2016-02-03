@@ -4,9 +4,18 @@
 import AVFoundation
 import Foundation
 
+if(Process.arguments.count<=1){
+    print("Please provide your BING_CLIENT_SECRET,  which can be obtained here for FREE:");
+    print("https://datamarket.azure.com/dataset/bing/speechrecognition");
+    print("And then here:");
+    print("https://datamarket.azure.com/account/keys");
+    exit(0)
+}
 let DatamarketAccessUri = "https://datamarket.accesscontrol.windows.net/v2/OAuth2-13";
-let client_secret=NSProcessInfo.processInfo().environment['BING_CLIENT_SECRET']
-let http_body = "grant_type=client_credentials&scope=https://speech.platform.bing.com&client_id=lyri&client_secret="+client_secret
+let client_secret=Process.arguments[1].stringByReplacingOccurrencesOfString("=",withString:"%3D") 
+// NSProcessInfo.processInfo().environment['BING_CLIENT_SECRET']
+let http_body = "grant_type=client_credentials&scope=https://speech.platform.bing.com&client_id=huh&client_secret="+client_secret
+// print(http_body);
 var bearer_token_session = NSURLSession.sharedSession()
 var err: NSError?
 var token_url =  NSURL(string: DatamarketAccessUri);
@@ -14,22 +23,24 @@ var token_request = NSMutableURLRequest(URL:token_url! ) // NSURLRequest
 token_request.HTTPMethod = "POST"
 token_request.HTTPBody = http_body.dataUsingEncoding(NSUTF8StringEncoding)!
 
-func got_result(data:NSData?, response:NSURLResponse?, error:NSError? ){
-    print("ANSWER")
-    let result=NSString(data:data!, encoding:NSUTF8StringEncoding)
+
+var access_token:String=""
+func get_token(){
+    let task = bearer_token_session.dataTaskWithRequest(token_request, completionHandler: {(data, response, error) in
     do {
         if let jsonResult = try NSJSONSerialization.JSONObjectWithData(data!, options: []) as? NSDictionary {
-            // print(jsonResult)
-            let result=jsonResult["header"]!["lexical"]!;
-            print(result!)
+            print(jsonResult);
+            access_token=jsonResult["access_token"] as! String
+            print("access_token: "+access_token)
+            // if(access_token==nil){print(jsonResult);}
         }
-    }
-    catch {
-        print(result)
-        print("got_result error");
-        print(error)
-    }        
-    exit(0)
+        } catch {
+            print(data)
+            print(error)
+            exit(0)
+        }
+        })
+    task.resume()
 }
 
 
@@ -72,27 +83,29 @@ func post_wav(token: String){
     task.resume()
 }
 
-var access_token:String=""
-func get_token(){
-    let task = bearer_token_session.dataTaskWithRequest(token_request, completionHandler: {(data, response, error) in
-    do {
-        if let jsonResult = try NSJSONSerialization.JSONObjectWithData(data!, options: []) as? NSDictionary {
-            access_token=jsonResult["access_token"] as! String
-            // print(access_token)
-        }
-        } catch {
-            print(data)
-            print(error)
-            exit(0)
-        }
-        })
-
-    task.resume()
-}
-
 func recognize(){
             post_wav(access_token)
 }
+
+
+func got_result(data:NSData?, response:NSURLResponse?, error:NSError? ){
+    print("ANSWER")
+    let result=NSString(data:data!, encoding:NSUTF8StringEncoding)
+    do {
+        if let jsonResult = try NSJSONSerialization.JSONObjectWithData(data!, options: []) as? NSDictionary {
+            print(jsonResult)
+            let result=jsonResult["header"]!["lexical"]!;
+            print(result!)
+        }
+    }
+    catch {
+        print(result)
+        print("got_result error");
+        print(error)
+    }        
+    exit(0)
+}
+
 
 let opt=[AVLinearPCMBitDepthKey: 8, AVNumberOfChannelsKey: 1, AVSampleRateKey: 16000, AVLinearPCMIsBigEndianKey: 0,AVLinearPCMIsFloatKey: 0]
 // "AVAudioSession alternative on OSX to get audio driver sample rate" WTF
